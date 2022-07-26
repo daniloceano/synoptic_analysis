@@ -17,8 +17,8 @@ from botocore import UNSIGNED            # boto3 config
 from botocore.config import Config       # boto3 config
 import math                              # Mathematical functions
 from datetime import datetime            # Basic Dates and time types
-from osgeo import osr                    # Python bindings for GDAL
-from osgeo import gdal                   # Python bindings for GDAL
+# from osgeo import osr                    # Python bindings for GDAL
+# from osgeo import gdal                   # Python bindings for GDAL
 
 #from netCDF4 import Dataset          # Read / Write NetCDF4 files
 #import matplotlib.pyplot as plt      # Plotting library
@@ -289,35 +289,35 @@ def convertExtent2GOESProjection(extent):
     c, d = latlon2xy(extent[3], extent[2])
     return (a * GOES16_HEIGHT, c * GOES16_HEIGHT, b * GOES16_HEIGHT, d * GOES16_HEIGHT)
 
-#-----------------------------------------------------------------------------------------------------------
-# Function to reproject the data
-def reproject(file_name, ncfile, array, extent, undef):
+# #-----------------------------------------------------------------------------------------------------------
+# # Function to reproject the data
+# def reproject(file_name, ncfile, array, extent, undef):
 
-    # Read the original file projection and configure the output projection
-    source_prj = osr.SpatialReference()
-    source_prj.ImportFromProj4(ncfile.GetProjectionRef())
+#     # Read the original file projection and configure the output projection
+#     source_prj = osr.SpatialReference()
+#     source_prj.ImportFromProj4(ncfile.GetProjectionRef())
 
-    target_prj = osr.SpatialReference()
-    target_prj.ImportFromProj4("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+#     target_prj = osr.SpatialReference()
+#     target_prj.ImportFromProj4("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
    
-    # Reproject the data
-    GeoT = ncfile.GetGeoTransform()
-    driver = gdal.GetDriverByName('MEM')
-    raw = driver.Create('raw', array.shape[0], array.shape[1], 1, gdal.GDT_Float32)
-    raw.SetGeoTransform(GeoT)
-    raw.GetRasterBand(1).WriteArray(array)
+#     # Reproject the data
+#     GeoT = ncfile.GetGeoTransform()
+#     driver = gdal.GetDriverByName('MEM')
+#     raw = driver.Create('raw', array.shape[0], array.shape[1], 1, gdal.GDT_Float32)
+#     raw.SetGeoTransform(GeoT)
+#     raw.GetRasterBand(1).WriteArray(array)
 
-    # Define the parameters of the output file  
-    kwargs = {'format': 'netCDF', \
-            'srcSRS': source_prj, \
-            'dstSRS': target_prj, \
-            'outputBounds': (extent[0], extent[3], extent[2], extent[1]), \
-            'outputBoundsSRS': target_prj, \
-            'outputType': gdal.GDT_Float32, \
-            'srcNodata': undef, \
-            'dstNodata': 'nan', \
-            'resampleAlg': gdal.GRA_NearestNeighbour}
+#     # Define the parameters of the output file  
+#     kwargs = {'format': 'netCDF', \
+#             'srcSRS': source_prj, \
+#             'dstSRS': target_prj, \
+#             'outputBounds': (extent[0], extent[3], extent[2], extent[1]), \
+#             'outputBoundsSRS': target_prj, \
+#             'outputType': gdal.GDT_Float32, \
+#             'srcNodata': undef, \
+#             'dstNodata': 'nan', \
+#             'resampleAlg': gdal.GRA_NearestNeighbour}
 
-    # Write the reprojected file on disk
-    gdal.Warp(file_name, raw, **kwargs)
+#     # Write the reprojected file on disk
+#     gdal.Warp(file_name, raw, **kwargs)
 
