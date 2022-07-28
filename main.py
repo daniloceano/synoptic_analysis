@@ -15,6 +15,7 @@ Contact:
 """
 
 from metpy.units import units
+from metpy.constants import g
 from metpy.constants import Cp_d
 from metpy.constants import Re
 from metpy.calc import potential_temperature
@@ -25,8 +26,7 @@ import os
 import numpy as np
 import argparse
 
-from calc import CalcAreaAverage, CalcZonalAverage
-from plot_maps import LagrangianMaps as plot_map
+from plot_maps import plot_levels,plot_ThetaHgtWind,plot_SLPJetWind
 
 import time
 
@@ -96,13 +96,45 @@ class DataObject:
             * units(dfVars.loc['Northward Wind Component']['Units']).to('m/s')
         self.Omega = self.NetCDF_data[dfVars.loc['Omega Velocity']['Variable']] \
             * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
-        self.GeopotHeight = self.NetCDF_data[dfVars.loc['Geopotential Height']['Variable']] \
+        if args.geopotential:
+             self.GeopotHeight = (self.NetCDF_data[dfVars.loc['Geopotential']['Variable']])/g \
+            * units(dfVars.loc['Geopotential']['Units']).metpy.convert_units('gpm')
+        else:
+            self.GeopotHeight = self.NetCDF_data[dfVars.loc['Geopotential Height']['Variable']] \
             * units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
         self.Pressure = self.NetCDF_data[self.LevelIndexer]
+        try:
+            self.SLP = self.NetCDF_data[dfVars.loc['Sea Level Pressure']['Variable']] \
+                * units(dfVars.loc['Sea Level Pressure']['Units']).to('hPa')
+        except:
+            print('not using Sea Level Pressure data (either it is not existent\
+ or it was not specified in the fvars file')
         
 def main():
     DataObj = DataObject(NetCDF_data,dfVars)
-    
+    TimeName = dfVars.loc['Time']['Variable']
+    hgt = DataObj.GeopotHeight
+    omega = DataObj.Omega
+    u,v = DataObj.u, DataObj.v
+    temperature = DataObj.Temperature
+    pres = DataObj.Pressure
+    slp = DataObj.SLP
+    for t in hgt[TimeName].values:
+        # Plot hgt, omega and wind for some levels
+        ight = hgt.sel({TimeName:t})
+        ight.name = 'geo. height'
+        iomega = omega.sel({TimeName:t})
+        iomega.name = 'omega vel.'
+        iu,iv = u.sel({TimeName:t}), v.sel({TimeName:t})
+        plot_levels(iomega,outdir,'hgt_omega',ight,iu,iv)
+        # plot theta, hgt and wind for 850 hPa
+        itemperature = temperature.sel({TimeName:t})
+        theta = potential_temperature(pres,itemperature)
+        plot_ThetaHgtWind(theta,ight,iu,iv,outdir,'theta_hgt')
+        # plot slp, jet and wind
+        islp = slp.sel({TimeName:t})
+        plot_SLPJetWind(islp,iu,iv,outdir,'SLP_jet')
+        
         
 if __name__ == "__main__":
     
@@ -113,11 +145,11 @@ within it. An auxilliary 'fvars' file is also needed for both frameworks: it \
 contains the specified names used for each variable. The results are stored \
 in the 'SynopticAnalysis_Results' directory")
     parser.add_argument("infile", help = "input .nc file with temperature,\
-  geopotential and meridional, zonal and vertical components of the wind,\
+ geopotential and meridional, zonal and vertical components of the wind,\
   in pressure levels")
     parser.add_argument("-g", "--geopotential", default = False,
     action='store_true', help = "use the geopotential data instead of\
-  geopotential height. The file fvars must be adjusted for doing so.")
+ geopotential height. The file fvars must be adjusted for doing so.")
 
     args = parser.parse_args()
     
@@ -129,5 +161,9 @@ in the 'SynopticAnalysis_Results' directory")
     NetCDF_data = convert_lon(xr.open_dataset(infile),
                               dfVars.loc['Longitude']['Variable'])
     
+    output = infile.split('/')[-1].split('.')[0]
+    outdir = "../SynopticAnalysis_Results/"+output+"/"; os.makedirs(
+        outdir, exist_ok=True)
+    
     # Run the program
-                      
+    main()            
