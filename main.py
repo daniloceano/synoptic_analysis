@@ -118,7 +118,10 @@ def main():
     u,v = DataObj.u, DataObj.v
     temperature = DataObj.Temperature
     pres = DataObj.Pressure
-    slp = DataObj.SLP
+    try:
+        slp = DataObj.SLP
+    except:
+        slp = None
     for t in hgt[TimeName].values:
         # Plot hgt, omega and wind for some levels
         ight = hgt.sel({TimeName:t})
@@ -132,8 +135,9 @@ def main():
         theta = potential_temperature(pres,itemperature)
         plot_ThetaHgtWind(theta,ight,iu,iv,outdir,'theta_hgt')
         # plot slp, jet and wind
-        islp = slp.sel({TimeName:t})
-        plot_SLPJetWind(islp,iu,iv,outdir,'SLP_jet')
+        if slp is not None:
+            islp = slp.sel({TimeName:t})
+            plot_SLPJetWind(islp,iu,iv,outdir,'SLP_jet')
         
         
 if __name__ == "__main__":
