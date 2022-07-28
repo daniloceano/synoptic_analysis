@@ -83,7 +83,7 @@ def make_img(year,day_of_year,hour,minute,band):
     
     # Use the Geostationary projection in cartopy
     ax = plt.axes(projection=ccrs.Geostationary(
-        central_longitude=min_lon,
+        central_longitude=min_lon-10,
         satellite_height=35786023.0))
     
     # Compute data-extent in GOES projection-coordinates
@@ -138,8 +138,8 @@ def make_img(year,day_of_year,hour,minute,band):
     plt.title('Full Disk', fontsize=10, loc='right')
     #-----------------------------------------------------------------------------------------------------------
     # Save the image
-    prefix_name = bucket_name+'_'+product_name
-    fname = f'{output}/'+prefix_name+'_'+date.strftime('%Y%m%d%H%M%S')+'.png'
+    prefix_name = bucket_name+'_band'+str(band)+'_'+product_name+'_'
+    fname = f'{output}/'+prefix_name+date.strftime('%Y%m%d%H%M%S')+'.png'
     plt.savefig(fname)
     print(fname+" created")
 #-----------------------------------------------------------------------------------------------------------
