@@ -3,7 +3,14 @@
 """
 Created on Fri Jul 22 08:52:34 2022
 
-@author: danilocoutodsouza
+Created by:
+    Danilo Couto de Souza
+    Universidade de São Paulo (USP)
+    Instituto de Astornomia, Ciências Atmosféricas e Geociências
+    São Paulo - Brazil
+
+Contact:
+    danilo.oceano@gmail.com
 """
 
 import matplotlib.pyplot as plt
@@ -21,18 +28,19 @@ from matplotlib.ticker import FuncFormatter
 
 
 def map_features(ax):
-    ax.add_feature(COASTLINE)
-    ax.add_feature(BORDERS,edgecolor='#383838')
+    ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=3)
+    ax.add_feature(BORDERS,edgecolor='#283618',linewidth=3)
     return ax
 
 def Brazil_states(ax):    
-    states = NaturalEarthFeature(category='cultural', scale='50m', facecolor='none',
+    states = NaturalEarthFeature(category='cultural', scale='50m', 
+                                 facecolor='none',
                                   name='admin_1_states_provinces_lines')
-    _ = ax.add_feature(states, edgecolor='#383838')
+    _ = ax.add_feature(states, edgecolor='#283618',linewidth=3)
     
     cities = NaturalEarthFeature(category='cultural', scale='50m', facecolor='none',
                                   name='populated_places')
-    _ = ax.add_feature(cities)
+    _ = ax.add_feature(cities, edgecolor='#283618',linewidth=3)
     
 def grid_labels_params(ax,i):
     gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
@@ -73,16 +81,6 @@ def plot_levels(ShadedVar,FigsDirectory,fname,ContourVar=None,u=None,v=None):
     LonIndexer,LatIndexer,TimeIndexer,LevelIndexer = \
       dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
       dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
-    dfbox = pd.read_csv('./box_limits',delimiter=';',index_col=0,header=None)
-    # limits for the map (represents the maximum limits of the lagrangian box)
-    westernlimit = find_nearest(ShadedVar[LonIndexer],
-                                float(dfbox.loc['min_lon'].values))
-    easternlimit = find_nearest(ShadedVar[LonIndexer],
-                                float(dfbox.loc['max_lon'].values))
-    southernlimit = find_nearest(ShadedVar[LatIndexer],
-                                 float(dfbox.loc['min_lat'].values))
-    northernlimit = find_nearest(ShadedVar[LonIndexer],
-                                 float(dfbox.loc['max_lat'].values))
     # projection
     proj = ccrs.PlateCarree() 
     # create figure
@@ -96,30 +94,19 @@ def plot_levels(ShadedVar,FigsDirectory,fname,ContourVar=None,u=None,v=None):
         MatchingLevels.append(min(ShadedVar[LevelIndexer].values, key=lambda x:abs(x-pres)))
     # loop through pressure levels
     for p,i in zip(MatchingLevels,range(len(MatchingLevels))):
-        # Get current time and time strings
-        itime = ShadedVar[TimeIndexer].values
         # create subplot
         ax = fig.add_subplot(gs[i], projection=proj)
-        ax.set_extent([westernlimit,easternlimit,southernlimit,northernlimit]) 
+        # ax.set_extent([westernlimit,easternlimit,southernlimit,northernlimit]) 
         # Add decorators and Brazil states
         grid_labels_params(ax,i)
         Brazil_states(ax)
         # Slice data for the desired domain and pressure level
-        iShadedVar = ShadedVar.sel({LevelIndexer:p}).sel(
-            **{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)})
+        iShadedVar = ShadedVar.sel({LevelIndexer:p})
         if ContourVar is not None:
-            iContourVar = ContourVar.sel({LevelIndexer:p}).sel(
-                **{LatIndexer:slice(northernlimit,southernlimit),
-                   LonIndexer: slice(westernlimit,easternlimit)})
+            iContourVar = ContourVar.sel({LevelIndexer:p})
         if u is not None and v is not None:
-            iu = u.sel({LevelIndexer:p}).sel(
-                **{LatIndexer:slice(northernlimit,southernlimit),
-                   LonIndexer: slice(westernlimit,easternlimit)})
-            iv = v.sel({LevelIndexer:p}).sel(
-                **{LatIndexer:slice(northernlimit,southernlimit),
-                   LonIndexer: slice(westernlimit,easternlimit)})
-        # get latitude and longitude
+            iu = u.sel({LevelIndexer:p})
+            iv = v.sel({LevelIndexer:p})
         lon,lat = iShadedVar[LonIndexer], iShadedVar[LatIndexer]
         # get data range
         max1,min1 = float(np.amax(iShadedVar)), float(np.amin(iShadedVar))
@@ -175,16 +162,6 @@ def plot_ThetaHgtWind(ThetaData,HgtData,u,v,FigsDirectory,fname):
     LonIndexer,LatIndexer,TimeIndexer,LevelIndexer = \
       dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
       dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
-    dfbox = pd.read_csv('./box_limits',delimiter=';',index_col=0,header=None)
-    # limits for the map (represents the maximum limits of the lagrangian box)
-    westernlimit = find_nearest(ThetaData[LonIndexer],
-                                float(dfbox.loc['min_lon'].values))
-    easternlimit = find_nearest(ThetaData[LonIndexer],
-                                float(dfbox.loc['max_lon'].values))
-    southernlimit = find_nearest(ThetaData[LatIndexer],
-                                 float(dfbox.loc['min_lat'].values))
-    northernlimit = find_nearest(ThetaData[LonIndexer],
-                                 float(dfbox.loc['max_lat'].values))
     # get values for 850 hPa
     lev850 = find_nearest(ThetaData[LevelIndexer],850)
     ThetaData = ThetaData.sel({LevelIndexer:lev850})
@@ -195,24 +172,12 @@ def plot_ThetaHgtWind(ThetaData,HgtData,u,v,FigsDirectory,fname):
     # create figure
     plt.close('all')
     fig = plt.figure(constrained_layout=False,figsize=(12,10))
-    # Get current time and time strings
-    itime = ThetaData[TimeIndexer].values
     # create subplot
     ax = fig.add_subplot(projection=proj)
-    ax.set_extent([westernlimit,easternlimit,southernlimit,northernlimit]) 
+    # ax.set_extent([westernlimit,easternlimit,southernlimit,northernlimit]) 
     # Add decorators and Brazil states
     grid_labels_params(ax,0)
     Brazil_states(ax)
-    # Slice data for the desired domain and pressure level
-    ThetaData = ThetaData.sel(**{LatIndexer:slice(
-        northernlimit,southernlimit), LonIndexer: slice(
-            westernlimit,easternlimit)})
-    HgtData = HgtData.sel(**{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)})
-    u = u.sel(**{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)})
-    v = v.sel( **{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)})
     # get latitude and longitude
     lon,lat = ThetaData[LonIndexer], ThetaData[LatIndexer]
     # get data range
@@ -255,16 +220,6 @@ def plot_SLPJetWind(SLPData,u,v,FigsDirectory,fname):
     LonIndexer,LatIndexer,TimeIndexer,LevelIndexer = \
       dfVars.loc['Longitude']['Variable'],dfVars.loc['Latitude']['Variable'],\
       dfVars.loc['Time']['Variable'],dfVars.loc['Vertical Level']['Variable']
-    dfbox = pd.read_csv('./box_limits',delimiter=';',index_col=0,header=None)
-    # limits for the map (represents the maximum limits of the lagrangian box)
-    westernlimit = find_nearest(SLPData[LonIndexer],
-                                float(dfbox.loc['min_lon'].values))
-    easternlimit = find_nearest(SLPData[LonIndexer],
-                                float(dfbox.loc['max_lon'].values))
-    southernlimit = find_nearest(SLPData[LatIndexer],
-                                 float(dfbox.loc['min_lat'].values))
-    northernlimit = find_nearest(SLPData[LonIndexer],
-                                 float(dfbox.loc['max_lat'].values))
     # get wind speed  for 250 hPa
     lev250 = find_nearest(u[LevelIndexer],250)
     u250,v250 = u.sel({LevelIndexer:lev250}),v.sel({LevelIndexer:lev250})
@@ -277,27 +232,12 @@ def plot_SLPJetWind(SLPData,u,v,FigsDirectory,fname):
     # create figure
     plt.close('all')
     fig = plt.figure(constrained_layout=False,figsize=(12,10))
-    # Get current time and time strings
-    itime = SLPData[TimeIndexer].values
     # create subplot
     ax = fig.add_subplot(projection=proj)
-    ax.set_extent([westernlimit,easternlimit,southernlimit,northernlimit]) 
+    # ax.set_extent([westernlimit,easternlimit,southernlimit,northernlimit]) 
     # Add decorators and Brazil states
     grid_labels_params(ax,0)
     Brazil_states(ax)
-    # Slice data for the desired domain and pressure level
-    SLPData = SLPData.sel(**{LatIndexer:slice(
-        northernlimit,southernlimit), LonIndexer: slice(
-            westernlimit,easternlimit)}).metpy.convert_units('hPa')
-    ws = ws.sel( **{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)}).metpy.convert_units('m/s')
-    u_sfc = u_sfc.sel(**{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)})
-    v_sfc = v_sfc.sel(**{LatIndexer:slice(northernlimit,southernlimit),
-               LonIndexer: slice(westernlimit,easternlimit)})
-    # Remove values lower than 30 m/s from 250 wind
-    # ws_masked = np.ma.masked_where(ws.values < 30, ws)
-    # get latitude and longitude
     lon,lat = SLPData[LonIndexer], SLPData[LatIndexer]
     # specs
     vmin, vmax = 990, 1040

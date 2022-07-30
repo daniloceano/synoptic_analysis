@@ -111,7 +111,7 @@ class DataObject:
  or it was not specified in the fvars file')
         
 def main():
-    DataObj = DataObject(NetCDF_data,dfVars)
+    DataObj = DataObject(NetCDF_data,dfVars,dfbox)
     TimeName = dfVars.loc['Time']['Variable']
     hgt = DataObj.GeopotHeight
     omega = DataObj.Omega
@@ -154,12 +154,19 @@ in the 'SynopticAnalysis_Results' directory")
     parser.add_argument("-g", "--geopotential", default = False,
     action='store_true', help = "use the geopotential data instead of\
  geopotential height. The file fvars must be adjusted for doing so.")
-
+    parser.add_argument("-b", "--box_limits", default = False,
+    action='store_true', help = "use the box_limits file for slicing the data\
+ for a desired domain.")
+ 
     args = parser.parse_args()
     
     dfVars = pd.read_csv('./fvars',sep= ';',index_col=0,header=0)
-    dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',
+    if args.box_limits:
+        dfbox = pd.read_csv('./box_limits',header=None,delimiter=';',
                         index_col=0)
+        print('using box_limits file for slicing data')
+    else:
+        dfbox = None
     
     infile  = args.infile
     NetCDF_data = convert_lon(xr.open_dataset(infile),
