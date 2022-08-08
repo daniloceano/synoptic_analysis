@@ -144,10 +144,10 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description = "\
 Program for synoptic analysis of an atmospheric system or region. \n \
-A box is definid in the box_lims' file and then the analysis is performed \
-within it. An auxilliary 'fvars' file is also needed for both frameworks: it \
-contains the specified names used for each variable. The results are stored \
-in the 'SynopticAnalysis_Results' directory")
+A box is defined in the 'box_lims' file and then the analysis is performed \
+within it. An auxilliary 'fvars' file is also needed: it contains the \
+specified names used for each variable. The results are stored in the \
+~'SynopticAnalysis_Results' directory")
     parser.add_argument("infile", help = "input .nc file with temperature,\
  geopotential and meridional, zonal and vertical components of the wind,\
   in pressure levels")
