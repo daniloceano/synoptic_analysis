@@ -86,6 +86,45 @@ def plot_map(ght,first_guess_loc,track_loc):
     print(outfile+' created!')
     
 def plot_tracks():
+    track = pd.read_csv('./track',sep= ';',index_col=0,header=0)
+    for i in range(3):
+        # projection
+        proj = ccrs.PlateCarree() 
+        # create figure
+        plt.close('all')
+        fig = plt.figure(constrained_layout=False,figsize=(12,10))
+        # create subplot
+        ax = fig.add_subplot(projection=proj)
+        ax.set_extent([westernlimit,easternlimit,
+                       southernlimit,northernlimit]) 
+        # Add decorators and Brazil states
+        grid_labels_params(ax,0)
+        Brazil_states(ax)
+        # plot track
+        if i == 0 or i == 1:
+            ax.plot(track['Lon'],track['Lat'],c='#BF3D3B',
+                    label='track',linewidth=2)
+            ax.scatter(track['Lon'],track['Lat'],s=50,c='#BF3D3B',
+                       edgecolor='k')
+        # plot first_guess
+        if i == 0 or i == 2:
+            ax.plot(first_guess['Lon'],first_guess['Lat'],c='#383838',
+                    label='first guess')
+            ax.scatter(first_guess['Lon'],first_guess['Lat'],edgecolor='k',
+                       linewidth=2,s=50)
+        # decorators
+        map_features(ax)
+        if i == 0:
+            plt.legend(fontsize=18)
+            plt.savefig(outdir+'compare_track_guess',bbox_inches='tight')
+        elif i == 1:
+            plt.title('Track', fontsize=18)
+            plt.savefig(outdir+'track',bbox_inches='tight')
+        elif i == 2:
+            plt.title('First guess', fontsize=18)
+            plt.savefig(outdir+'first_guess',bbox_inches='tight')
+
+def plot_intensity():
     # coordinate/variable names
     dfVars = pd.read_csv('./fvars',sep= ';',index_col=0,header=0)
     # open file
@@ -94,7 +133,6 @@ def plot_tracks():
     # model level closest to ground
     sfc_lvl = np.amax(NetCDF_data[LevelIndexer])
     timesteps = NetCDF_data[TimeIndexer]
-    
     # Get Ght value for each track point
     track = pd.read_csv('./track',sep= ';',index_col=0,header=0)
     track_ghts = []
@@ -135,41 +173,34 @@ def plot_tracks():
         fg_ghts.append(float(ght.sel({LonIndexer:x,LatIndexer:y})))
     
     for i in range(3):
-        # projection
-        proj = ccrs.PlateCarree() 
-        # create figure
         plt.close('all')
-        fig = plt.figure(constrained_layout=False,figsize=(12,10))
-        # create subplot
-        ax = fig.add_subplot(projection=proj)
-        ax.set_extent([westernlimit,easternlimit,
-                       southernlimit,northernlimit]) 
-        # Add decorators and Brazil states
-        grid_labels_params(ax,0)
-        Brazil_states(ax)
-        # plot track
+        plt.figure(constrained_layout=False,figsize=(12,10))
+        ax = plt.gca()
+        
         if i == 0 or i == 1:
-            ax.plot(track['Lon'],track['Lat'],c='#BF3D3B',
+            ax.plot(timesteps,track_ghts,c='#BF3D3B',
                     label='track',linewidth=2)
-            ax.scatter(track['Lon'],track['Lat'],s=50,c='#BF3D3B',
+            ax.scatter(timesteps,track_ghts,s=50,c='#BF3D3B',
                        edgecolor='k')
         # plot first_guess
         if i == 0 or i == 2:
-            ax.plot(first_guess['Lon'],first_guess['Lat'],c='#383838',
+            ax.plot(timesteps,fg_ghts,c='#383838',
                     label='first guess')
-            ax.scatter(first_guess['Lon'],first_guess['Lat'],edgecolor='k',
+            ax.scatter(timesteps,fg_ghts,edgecolor='k',
                        linewidth=2,s=50)
-        # decorators
-        map_features(ax)
+        plt.grid(c='gray',linewidth=0.25,linestyle='dashdot')
+        plt.tick_params(axis='x', labelrotation=20)
+        ax.xaxis.set_tick_params(labelsize=16)
+        ax.yaxis.set_tick_params(labelsize=16)    
         if i == 0:
-            plt.legend()
-            plt.savefig(outdir+'compare_track_guess',bbox_inches='tight')
+            plt.legend(fontsize=18)
+            plt.savefig(outdir+'intensity_compare',bbox_inches='tight')
         elif i == 1:
-            plt.title('Track')
-            plt.savefig(outdir+'track',bbox_inches='tight')
+            plt.title('Track', fontsize=18)
+            plt.savefig(outdir+'intensity_track',bbox_inches='tight')
         elif i == 2:
-            plt.title('First guess')
-            plt.savefig(outdir+'first_guess',bbox_inches='tight')
+            plt.title('First guess', fontsize=18)
+            plt.savefig(outdir+'intensity_first_guess',bbox_inches='tight')
 
 def main(): 
 
@@ -242,6 +273,8 @@ def main():
     print('track file created!')
     plot_tracks()
     print('created maps with tracks')
+    plot_intensity()
+    print('created plots with cyclone intensity')
     
 if __name__ == "__main__":
     
