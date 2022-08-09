@@ -25,7 +25,7 @@ import pandas as pd
 from matplotlib import cm
 import matplotlib.colors as colors
 from matplotlib.ticker import FuncFormatter
-
+import os
 
 def map_features(ax):
     ax.add_feature(COASTLINE,edgecolor='#283618',linewidth=3)
@@ -153,7 +153,9 @@ def plot_levels(ShadedVar,FigsDirectory,fname,ContourVar=None,u=None,v=None):
         # decorators
         map_features(ax)
     # save file
-    outfile = FigsDirectory+'/map_'+fname+'_'+str(date)
+    outdir = FigsDirectory+'/map_'+fname+'/'; os.makedirs(
+        outdir, exist_ok=True)
+    outfile = outdir+fname+'_'+str(date)
     plt.savefig(outfile)
     print(outfile+' created!')
     
@@ -209,9 +211,10 @@ wind (barbs, kt) for '+str(date)
          t.set_fontsize(10)
     # decorators
     map_features(ax)
-    # Figure title
     # save file
-    outfile = FigsDirectory+'/map_'+fname+'_'+str(date)
+    outdir = FigsDirectory+'/map_'+fname+'/'; os.makedirs(
+        outdir, exist_ok=True)
+    outfile = outdir+fname+'_'+str(date)
     plt.savefig(outfile)
     print(outfile+' created!')
     
@@ -270,8 +273,9 @@ surface wind (barbs, kt) for '+str(date)
          t.set_fontsize(10)
     # decorators
     map_features(ax)
-    # Figure title
     # save file
-    outfile = FigsDirectory+'/map_'+fname+'_'+str(date)
+    outdir = FigsDirectory+'/map_'+fname+'/'; os.makedirs(
+        outdir, exist_ok=True)
+    outfile = outdir+fname+'_'+str(date)
     plt.savefig(outfile)
     print(outfile+' created!')
