@@ -116,13 +116,13 @@ def plot_tracks():
         map_features(ax)
         if i == 0:
             plt.legend(fontsize=18)
-            plt.savefig(outdir+'compare_track_guess',bbox_inches='tight')
+            plt.savefig(outdir+'track_compare',bbox_inches='tight')
         elif i == 1:
             plt.title('Track', fontsize=18)
             plt.savefig(outdir+'track',bbox_inches='tight')
         elif i == 2:
             plt.title('First guess', fontsize=18)
-            plt.savefig(outdir+'first_guess',bbox_inches='tight')
+            plt.savefig(outdir+'track_first_guess',bbox_inches='tight')
 
 def plot_intensity():
     # coordinate/variable names
@@ -178,15 +178,15 @@ def plot_intensity():
         ax = plt.gca()
         
         if i == 0 or i == 1:
-            ax.plot(timesteps,track_ghts,c='#BF3D3B',
+            ax.plot(timesteps.values,track_ghts,c='#BF3D3B',
                     label='track',linewidth=2)
-            ax.scatter(timesteps,track_ghts,s=50,c='#BF3D3B',
+            ax.scatter(timesteps.values,track_ghts,s=50,c='#BF3D3B',
                        edgecolor='k')
         # plot first_guess
         if i == 0 or i == 2:
-            ax.plot(timesteps,fg_ghts,c='#383838',
+            ax.plot(timesteps.values,fg_ghts,c='#383838',
                     label='first guess')
-            ax.scatter(timesteps,fg_ghts,edgecolor='k',
+            ax.scatter(timesteps.values,fg_ghts,edgecolor='k',
                        linewidth=2,s=50)
         plt.grid(c='gray',linewidth=0.25,linestyle='dashdot')
         plt.tick_params(axis='x', labelrotation=20)
@@ -294,7 +294,7 @@ It is advised to be set to correspond to 2 model grid points")
      # arguments
     args = parser.parse_args()
     infile  = args.infile
-    offset_box = int(args.box_size)
+    offset_box = float(args.box_size)
     
     # coordinate/variable names
     dfVars = pd.read_csv('./fvars',sep= ';',index_col=0,header=0)
