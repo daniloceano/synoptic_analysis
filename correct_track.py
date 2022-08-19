@@ -127,9 +127,6 @@ def plot_tracks():
 def plot_intensity():
     # coordinate/variable names
     dfVars = pd.read_csv('./fvars',sep= ';',index_col=0,header=0)
-    # open file
-    NetCDF_data = convert_lon(xr.open_dataset(infile),
-                              dfVars.loc['Longitude']['Variable'])
     # model level closest to ground
     sfc_lvl = np.amax(NetCDF_data[LevelIndexer])
     timesteps = NetCDF_data[TimeIndexer]
@@ -191,7 +188,8 @@ def plot_intensity():
         plt.grid(c='gray',linewidth=0.25,linestyle='dashdot')
         plt.tick_params(axis='x', labelrotation=20)
         ax.xaxis.set_tick_params(labelsize=16)
-        ax.yaxis.set_tick_params(labelsize=16)    
+        ax.yaxis.set_tick_params(labelsize=16)
+        plt.xlim([timesteps[0].values,timesteps[-1].values])
         if i == 0:
             plt.legend(fontsize=18)
             plt.savefig(outdir+'intensity_compare',bbox_inches='tight')
@@ -310,6 +308,7 @@ It is advised to be set to correspond to 2 model grid points")
     
     # File with tracks defined 'by the eye'
     first_guess =  pd.read_csv('./first_guess',sep= ';',index_col=0,header=0)
+
     
     # Limits for plotting (bigger plot)
     offset_map = 10
@@ -323,6 +322,10 @@ It is advised to be set to correspond to 2 model grid points")
     LatIndexer = dfVars.loc['Latitude']['Variable']
     TimeIndexer = dfVars.loc['Time']['Variable']
     LevelIndexer = dfVars.loc['Vertical Level']['Variable']
+    
+    # Slice NetCDF file for only the times present in the first_guess file
+    NetCDF_data = NetCDF_data.sel({TimeIndexer:
+                        slice(first_guess.index[0],first_guess.index[-1])})
     
     # Rune and time the execution
     start_time = time.time()

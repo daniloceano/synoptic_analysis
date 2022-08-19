@@ -97,8 +97,8 @@ class DataObject:
         self.Omega = self.NetCDF_data[dfVars.loc['Omega Velocity']['Variable']] \
             * units(dfVars.loc['Omega Velocity']['Units']).to('Pa/s')
         if args.geopotential:
-             self.GeopotHeight = (self.NetCDF_data[dfVars.loc['Geopotential']['Variable']])/g \
-            * units(dfVars.loc['Geopotential']['Units']).metpy.convert_units('gpm')
+             self.GeopotHeight = ((self.NetCDF_data[dfVars.loc['Geopotential']['Variable']] \
+            * units(dfVars.loc['Geopotential']['Units']))/g).metpy.convert_units('gpm')
         else:
             self.GeopotHeight = self.NetCDF_data[dfVars.loc['Geopotential Height']['Variable']] \
             * units(dfVars.loc['Geopotential Height']['Units']).to('gpm')
@@ -159,6 +159,8 @@ specified names used for each variable. The results are stored in the \
  for a desired domain.")
  
     args = parser.parse_args()
+    # args = parser.parse_args(["-b","-g",
+    #     "../data_etc/netCDF_files/Reg1-Yakecan_ERA5.nc"])
     
     dfVars = pd.read_csv('./fvars',sep= ';',index_col=0,header=0)
     if args.box_limits:

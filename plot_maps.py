@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import cmocean.cm as cmo
 import numpy as np 
 import matplotlib.gridspec as gridspec
+import matplotlib.colors
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from cartopy.feature import NaturalEarthFeature, COASTLINE
@@ -24,7 +25,6 @@ from cartopy.feature import BORDERS
 import pandas as pd
 from matplotlib import cm
 import matplotlib.colors as colors
-from matplotlib.ticker import FuncFormatter
 import os
 
 def map_features(ax):
@@ -55,6 +55,17 @@ def grid_labels_params(ax,i):
     gl.xformatter = LONGITUDE_FORMATTER
     gl.yformatter = LATITUDE_FORMATTER
     return ax
+
+def white_cmap(cmap):
+    n=35
+    x = 0.5
+    lower = cmap(np.linspace(0, x, n))
+    white = np.ones((80-2*n,4))
+    upper = cmap(np.linspace(1-x, 1, n))
+    colors = np.vstack((lower, white, upper))
+    tmap = matplotlib.colors.LinearSegmentedColormap.from_list('map_white', colors)
+    return tmap
+
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -88,6 +99,12 @@ def plot_levels(ShadedVar,FigsDirectory,fname,ContourVar=None,u=None,v=None):
     fig = plt.figure(constrained_layout=False,figsize=(24,20))
     gs = gridspec.GridSpec(2, 3, hspace=0.1, wspace=0.1,
                                    left=0.05, right=0.95)
+    # if resolution is high, reduce number of wind barbs
+    dx = np.abs(float(ShadedVar[LatIndexer][1])-float(ShadedVar[LatIndexer][0]))
+    if dx >= 2.5:
+        skip = 1
+    else:
+        skip = int((2.5/dx)*1.5)
     # Find vertical levels that closely matches the desired levels for plotting
     MatchingLevels = []
     for pres in [1000,850,700,500,300,200]:
@@ -110,18 +127,25 @@ def plot_levels(ShadedVar,FigsDirectory,fname,ContourVar=None,u=None,v=None):
         lon,lat = iShadedVar[LonIndexer], iShadedVar[LatIndexer]
         # get data range
         max1,min1 = float(np.amax(iShadedVar)), float(np.amin(iShadedVar))
+        interval = 16
         # (if data is an annomaly)
         if min1 > 0:
             cmap = cmo.amp
             norm = cm.colors.Normalize(vmax=max1,vmin=min1)
+            clev = np.linspace(min1,max1,interval)
         # (if data is not an annomaly)
         else:
-            cmap = cmo.balance
+            cmap = white_cmap(cmo.balance)
             norm = colors.TwoSlopeNorm(vmin=min1, vcenter=0, vmax=max1)
+            if np.abs(max1) > np.abs(min1):
+                clev = np.linspace(-max1,max1,interval)
+            else:
+                clev = np.linspace(min1,-min1,interval)
         # plot shaded
-        cf1 = ax.contourf(lon, lat, iShadedVar, cmap=cmap,norm=norm) 
+        cf1 = ax.contourf(lon, lat, iShadedVar, cmap=cmap,norm=norm,
+                          levels=clev) 
         ax.contour(lon, lat, iShadedVar,cf1.levels,colors='#383838',
-               linewidths=0.2)
+               linewidths=0.2, levels=clev)
         # plot contour
         if ContourVar is not None:
             levels = np.linspace(np.amin(iContourVar),np.amax(iContourVar),12)
@@ -129,8 +153,9 @@ def plot_levels(ShadedVar,FigsDirectory,fname,ContourVar=None,u=None,v=None):
                    linewidths=2.5)
             ax.clabel(cs, cs.levels, inline=True,fmt = '%1.0f', fontsize=12)
         if u is not None and v is not None:
-            ax.barbs(lon, lat, iu.metpy.convert_units('kt'),
-                     iv.metpy.convert_units('kt'))
+            ax.barbs(lon[::skip], lat[::skip],
+                     iu[::skip,::skip].metpy.convert_units('kt'),
+                     iv[::skip,::skip].metpy.convert_units('kt'))
         # get time string
         timestr = pd.to_datetime(str(iShadedVar[TimeIndexer].values))
         date = timestr.strftime('%Y-%m-%dT%H%MZ')
@@ -169,6 +194,12 @@ def plot_ThetaHgtWind(ThetaData,HgtData,u,v,FigsDirectory,fname):
     ThetaData = ThetaData.sel({LevelIndexer:lev850})
     HgtData = HgtData.sel({LevelIndexer:lev850})
     u,v = u.sel({LevelIndexer:lev850}),v.sel({LevelIndexer:lev850})
+    # if resolution is high, reduce number of wind barbs
+    dx = float(ThetaData[LatIndexer][1])-float(ThetaData[LatIndexer][0])
+    if dx >= 2.5:
+        skip = 1
+    else:
+        skip = int(2.5/dx)
     # projection
     proj = ccrs.PlateCarree() 
     # create figure
@@ -195,8 +226,9 @@ def plot_ThetaHgtWind(ThetaData,HgtData,u,v,FigsDirectory,fname):
     cs = ax.contour(lon, lat, HgtData,levels,colors='k',
                linewidths=2.5)
     ax.clabel(cs, cs.levels, inline=True, fmt = '%1.0f', fontsize=12)
-    ax.barbs(lon, lat, u.metpy.convert_units('kt'),
-                 v.metpy.convert_units('kt'))
+    ax.barbs(lon[::skip], lat[::skip], 
+             u[::skip,::skip].metpy.convert_units('kt'),
+             v[::skip,::skip].metpy.convert_units('kt'))
     # get time string
     timestr = pd.to_datetime(str(ThetaData[TimeIndexer].values))
     date = timestr.strftime('%Y-%m-%dT%H%MZ')
@@ -230,6 +262,12 @@ def plot_SLPJetWind(SLPData,u,v,FigsDirectory,fname):
     # Get surface winds
     lev1000 = find_nearest(u[LevelIndexer],1000)
     u_sfc, v_sfc =  u.sel({LevelIndexer:lev1000}),v.sel({LevelIndexer:lev1000})
+    # if resolution is high, reduce number of wind barbs
+    dx = float(SLPData[LatIndexer][1])-float(SLPData[LatIndexer][0])
+    if dx >= 2.5:
+        skip = 1
+    else:
+        skip = int(2.5/dx)
     # projection
     proj = ccrs.PlateCarree() 
     # create figure
@@ -255,8 +293,9 @@ def plot_SLPJetWind(SLPData,u,v,FigsDirectory,fname):
     cs = ax.contour(lon, lat, ws,levels,colors='k',
                linewidths=2.5)
     ax.clabel(cs, cs.levels, inline=True, fmt = '%1.0f', fontsize=12)
-    ax.barbs(lon, lat, u_sfc.metpy.convert_units('kt'),
-                 v_sfc.metpy.convert_units('kt'))
+    ax.barbs(lon[::skip], lat[:skip], 
+             u_sfc[::skip,::skip].metpy.convert_units('kt'),
+             v_sfc[::skip,::skip].metpy.convert_units('kt'))
     # get time string
     timestr = pd.to_datetime(str(SLPData[TimeIndexer].values))
     date = timestr.strftime('%Y-%m-%dT%H%MZ')
