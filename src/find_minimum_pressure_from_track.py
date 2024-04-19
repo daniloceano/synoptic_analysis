@@ -10,8 +10,55 @@ import cartopy.crs as ccrs
 import cartopy.feature
 import matplotlib.colors as mcolors
 
+infile = '../../../Programs_and_scripts/data_etc/netCDF_files/akara_subset_slp.nc'
 box_size = 5  # Half the size of the box, to create a 5x5 box
+pressure_indexer = 'msl'
+latitude_indexer = 'latitude'
+longitude_indexer = 'longitude'
 
+def extract_msl_for_original_track(original_track_df, data_ds, pressure_indexer='msl'):
+    """
+    Extracts the mean sea level pressure for the original track points.
+
+    Parameters:
+    - original_track_df: DataFrame containing the initial cyclone track guesses.
+    - data_ds: xarray Dataset containing 'msl' and other variables.
+
+    Returns:
+    - DataFrame with lat, lon values from the original track and the corresponding 'msl'.
+    """
+    msl_values = []
+
+    # Convert xarray Dataset's time to timezone-naive
+    time_as_pandas = pd.to_datetime(data_ds['time'].values).tz_localize(None)
+    data_ds['time'] = time_as_pandas
+
+    # Ensure longitude is correctly aligned for data selection
+    data_ds.coords["longitude"] = (data_ds.coords["longitude"] + 180) % 360 - 180
+    data_ds = data_ds.sortby(data_ds["longitude"])
+
+    # Make DataFrame's index timezone-naive for consistency
+    original_track_df.index = pd.to_datetime(original_track_df.index, utc=True).tz_convert(None)
+
+    for index, row in original_track_df.iterrows():
+        lat = row['Lat']
+        lon = row['Lon']
+
+        # Adjust longitude to match dataset's format
+        if lon < 0:
+            lon = 360 + lon
+
+        # Select the nearest msl value at the given coordinates and time
+        msl_at_point = data_ds.sel(latitude=lat, longitude=lon, time=index, method='nearest')[pressure_indexer].values.item()
+
+        # Append the result
+        msl_values.append(msl_at_point)
+
+    # Create a new DataFrame to store the results
+    msl_track_df = original_track_df.copy()
+    msl_track_df['MSL'] = np.round(msl_values, 2) / 100  # Optionally, round and scale the msl_values
+
+    return msl_track_df
 
 def find_real_track(first_guess_df, data_ds):
     """
@@ -43,8 +90,8 @@ def find_real_track(first_guess_df, data_ds):
         data_filtered = data_ds.sel(latitude=slice(lat_max, lat_min), longitude=slice(lon_min, lon_max), time=index)
         
         # Find the minimum 'msl' value and its location
-        min_msl_value = data_filtered['msl'].min()
-        min_msl_location = np.where(data_filtered['msl'] == min_msl_value)
+        min_msl_value = data_filtered[pressure_indexer].min()
+        min_msl_location = np.where(data_filtered[pressure_indexer] == min_msl_value)
 
         # Round the minimum 'msl' value to one decimal place
         min_msl_value_rounded = round(float(min_msl_value), 1)/100
@@ -131,7 +178,7 @@ def plot_msl_and_tracks_for_timestep(original_track, optimized_track, data_ds, i
     ax.add_feature(cartopy.feature.OCEAN, facecolor="lightblue")
 
     # Adjust MSL values by dividing by 100
-    msl_data = data_ds['msl'].sel(time=timestep) / 100
+    msl_data = data_ds[pressure_indexer].sel(time=timestep) / 100
 
     # Define the colormap and normalization
     levels = np.linspace(990, 1030, 20)
@@ -155,22 +202,37 @@ def plot_msl_and_tracks_for_timestep(original_track, optimized_track, data_ds, i
 
     ax.legend(loc="best")
 
+    # Add gridlines
+    gl = ax.gridlines(draw_labels=True, linestyle='--', alpha=0.5, color='darkgray')
+    gl.top_labels = gl.right_labels = False
+
+    # Add title
+    ax.set_title(f'{timestep} UTC')
+
+    # Save the plot
+
     filename = os.path.join(figures_directory, f'msl_track_{index}.png')
     plt.savefig(filename, bbox_inches='tight')
     plt.close()  # Close the plot to save memory
 
 # Loading the data
-infile = '../../Programs_and_scripts/data_etc/netCDF_files/akara_subset_slp.nc'
 data = xr.open_dataset(infile)
-first_guess = pd.read_csv('inputs/first_guess', sep=';', index_col=0, header=0)
+first_guess = pd.read_csv('../inputs/first_guess', sep=';', index_col=0, header=0)
+
+# Locate msl for the original track
+first_guess = extract_msl_for_original_track(first_guess, data)
 
 # Optimizing the track
 optimized_track = find_real_track(first_guess, data)
 
 # Create the output directory
 filename = os.path.basename(infile).split('.')[0]
-results_directory = f"../synoptic_analysis_results/{filename}/" 
+results_directory = f"../../synoptic_analysis_results/{filename}/" 
 os.makedirs(results_directory, exist_ok=True)
+
+# Save the original track to a CSV file
+original_track_file_path = f"./{results_directory}/original_track.csv"
+first_guess.to_csv(original_track_file_path, sep=';', index=True)
 
 # Save the optimized track to a CSV file
 optimized_track_file_path = f"./{results_directory}/optimized_track.csv"
